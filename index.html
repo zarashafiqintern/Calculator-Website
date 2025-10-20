@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculator</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculator</title>
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-     <section>
+  <section>
     <div>
       <input id="display" type="text" readonly>
     </div>
@@ -63,7 +65,10 @@
     <div id="history-container">
       <h3>History</h3>
       <div id="history"></div>
-      <button id="clear-history-btn">Clear History</button>
+      <div class="history-buttons">
+        <button id="clear-history-btn">Clear History</button>
+        <button id="restore-last-btn">Restore Last</button>
+      </div>
     </div>
   </section>
 
@@ -89,64 +94,70 @@
         if (currentInput) {
           let newInput = "";
           let i = 0;
-
           while (i < currentInput.length - 1) {
             newInput = newInput + currentInput[i];
             i++;
           }
-
           currentInput = newInput;
           display.value = currentInput;
         }
       };
 
-      // Function: calculate with full expression 
+      function safeEvaluate(expression) {
+        let expr = expression
+          .replace(/\)\(/g, ")*(")
+          .replace(/(\d)\(/g, "$1*(")
+          .replace(/\)(\d)/g, ")*$1")
+          .replace(/([0-9])([a-zA-Z])/g, "$1*$2")
+          .replace(/([a-zA-Z])([0-9])/g, "$1($2)")
+          .replace(/\b0+(\d+)/g, "$1");
+
+        expr = expr
+          .replace(/sqrt\(/g, "Math.sqrt(")
+          .replace(/sin\(/g, "Math.sin(Math.PI/180*")
+          .replace(/cos\(/g, "Math.cos(Math.PI/180*")
+          .replace(/tan\(/g, "Math.tan(Math.PI/180*")
+          .replace(/\^/g, "**");
+
+        let sinCount = (expr.match(/Math\.sin/g) || []).length;
+        let cosCount = (expr.match(/Math\.cos/g) || []).length;
+        let tanCount = (expr.match(/Math\.tan/g) || []).length;
+        let openCount = (expr.match(/\(/g) || []).length;
+        let closeCount = (expr.match(/\)/g) || []).length;
+        let extraBrackets = sinCount + cosCount + tanCount;
+        let i = 0;
+        while (i < extraBrackets) {
+          if (openCount > closeCount) {
+            expr = expr + ")";
+            closeCount = closeCount + 1;
+          }
+          i = i + 1;
+        }
+
+        let totalOpen = (expr.match(/\(/g) || []).length;
+        let totalClose = (expr.match(/\)/g) || []).length;
+        while (totalOpen > totalClose) {
+          expr = expr + ")";
+          totalClose++;
+        }
+
+        try {
+          let result = Function('"use strict"; return (' + expr + ")")();
+          return result;
+        } catch (e) {
+          return "Error";
+        }
+      }
       function calculate() {
         if (!currentInput) return;
-
         let expression = currentInput;
-        
         try {
-         
-          let expr = expression.trim();
-          
-          expr = expr.replace(/\^/g, '**');
-          
-          expr = expr.replace(/sqrt\(/g, 'Math.sqrt(');
-          
-         
-          expr = expr.replace(/sin\(/g, 'Math.sin(Math.PI/180*');
-          expr = expr.replace(/cos\(/g, 'Math.cos(Math.PI/180*');
-          expr = expr.replace(/tan\(/g, 'Math.tan(Math.PI/180*');
-          
-          
-          let sinCount = (expr.match(/Math\.sin/g) || []).length;
-          let cosCount = (expr.match(/Math\.cos/g) || []).length;
-          let tanCount = (expr.match(/Math\.tan/g) || []).length;
-          
-          let openCount = (expr.match(/\(/g) || []).length;
-          let closeCount = (expr.match(/\)/g) || []).length;
-          
-          
-          let extraBrackets = sinCount + cosCount + tanCount;
-          let i = 0;
-          while (i < extraBrackets) {
-            if (openCount > closeCount) {
-              expr = expr + ')';
-              closeCount = closeCount + 1;
-            }
-            i = i + 1;
-          }
-        
-          let result = new Function('return ' + expr)();
-          
-          if (typeof result === 'number') {
+          let result = safeEvaluate(expression);
+          if (typeof result === "number") {
             result = Math.round(result * 10000000000) / 10000000000;
           }
-          
-          display.value = result;
+          display.value = parseFloat(result.toFixed(4));
           currentInput = result + "";
-          
           addToHistory(expression, result);
         } catch (error) {
           display.value = "Error";
@@ -160,11 +171,9 @@
         updateHistoryDisplay();
       }
 
-      
       function updateHistoryDisplay() {
         let historyDiv = document.getElementById("history");
         historyDiv.innerHTML = "";
-
         let i = 0;
         while (i < historyArray.length) {
           let p = document.createElement("p");
@@ -180,24 +189,34 @@
         historyDiv.innerHTML = "";
       }
 
-      return { 
+      function restoreLast() {
+        if (historyArray.length > 0) {
+          let lastEntry = historyArray.pop();
+          updateHistoryDisplay();
+          let expression = lastEntry.split(" = ")[0];
+          display.value = expression;
+          currentInput = expression;
+        }
+      }
+
+      return {
         addInput,
         clearAll,
         deleteLast,
         calculate,
         clearHistory,
+        restoreLast,
       };
     })();
 
-   
     const display = document.getElementById("display");
     const buttons = document.querySelectorAll("button");
     const clearHistoryBtn = document.getElementById("clear-history-btn");
+    const restoreLastBtn = document.getElementById("restore-last-btn");
 
     buttons.forEach(function (btn) {
       btn.addEventListener("click", function () {
         const value = this.textContent;
-
         if (value === "AC") {
           calculator.clearAll();
         } else if (value === "Del") {
@@ -219,6 +238,25 @@
     clearHistoryBtn.addEventListener("click", function () {
       calculator.clearHistory();
     });
+
+    restoreLastBtn.addEventListener("click", function () {
+      calculator.restoreLast();
+    });
+
+    document.addEventListener("keydown", function (event) {
+      const key = event.key;
+      if (!isNaN(key) || ["+", "-", "*", "/", ".", "(", ")", "^"].includes(key)) {
+        calculator.addInput(key);
+      } else if (key === "Enter" || key === "=") {
+        event.preventDefault();
+        calculator.calculate();
+      } else if (key === "Backspace") {
+        calculator.deleteLast();
+      } else if (key === "Escape") {
+        calculator.clearAll();
+      }
+    });
   </script>
 </body>
+
 </html>
