@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+     <section>
+    <div>
+      <input id="display" type="text" readonly>
+    </div>
+
+    <div class="button">
+      <button class="control">AC</button>
+      <button class="control">Del</button>
+      <button>(</button>
+      <button>)</button>
+    </div>
+
+    <div class="button">
+      <button>7</button>
+      <button>8</button>
+      <button>9</button>
+      <button class="operator">*</button>
+    </div>
+
+    <div class="button">
+      <button>4</button>
+      <button>5</button>
+      <button>6</button>
+      <button class="operator">-</button>
+    </div>
+
+    <div class="button">
+      <button>1</button>
+      <button>2</button>
+      <button>3</button>
+      <button class="operator">+</button>
+    </div>
+
+    <div class="button">
+      <button>.</button>
+      <button>0</button>
+      <button>^</button>
+      <button class="operator">/</button>
+    </div>
+
+    <div class="button">
+      <button class="function">sin(</button>
+      <button class="function">cos(</button>
+      <button class="function">tan(</button>
+      <button class="function">sqrt(</button>
+    </div>
+
+    <div class="button">
+      <button class="function">e</button>
+      <button class="function">π</button>
+      <button class="equal" style="flex: 1;">=</button>
+    </div>
+
+    <div id="history-container">
+      <h3>History</h3>
+      <div id="history"></div>
+      <button id="clear-history-btn">Clear History</button>
+    </div>
+  </section>
+
+  <script>
+    const calculator = (() => {
+      let currentInput = "";
+      let historyArray = [];
+
+      // Function: input add karna
+      function addInput(value) {
+        currentInput = currentInput + value;
+        display.value = currentInput;
+      }
+
+      // Arrow function: clear all
+      const clearAll = () => {
+        currentInput = "";
+        display.value = "";
+      };
+
+      // Arrow function: delete last character
+      const deleteLast = () => {
+        if (currentInput) {
+          let newInput = "";
+          let i = 0;
+
+          while (i < currentInput.length - 1) {
+            newInput = newInput + currentInput[i];
+            i++;
+          }
+
+          currentInput = newInput;
+          display.value = currentInput;
+        }
+      };
+
+      // Function: calculate with full expression 
+      function calculate() {
+        if (!currentInput) return;
+
+        let expression = currentInput;
+        
+        try {
+         
+          let expr = expression.trim();
+          
+          expr = expr.replace(/\^/g, '**');
+          
+          expr = expr.replace(/sqrt\(/g, 'Math.sqrt(');
+          
+         
+          expr = expr.replace(/sin\(/g, 'Math.sin(Math.PI/180*');
+          expr = expr.replace(/cos\(/g, 'Math.cos(Math.PI/180*');
+          expr = expr.replace(/tan\(/g, 'Math.tan(Math.PI/180*');
+          
+          
+          let sinCount = (expr.match(/Math\.sin/g) || []).length;
+          let cosCount = (expr.match(/Math\.cos/g) || []).length;
+          let tanCount = (expr.match(/Math\.tan/g) || []).length;
+          
+          let openCount = (expr.match(/\(/g) || []).length;
+          let closeCount = (expr.match(/\)/g) || []).length;
+          
+          
+          let extraBrackets = sinCount + cosCount + tanCount;
+          let i = 0;
+          while (i < extraBrackets) {
+            if (openCount > closeCount) {
+              expr = expr + ')';
+              closeCount = closeCount + 1;
+            }
+            i = i + 1;
+          }
+        
+          let result = new Function('return ' + expr)();
+          
+          if (typeof result === 'number') {
+            result = Math.round(result * 10000000000) / 10000000000;
+          }
+          
+          display.value = result;
+          currentInput = result + "";
+          
+          addToHistory(expression, result);
+        } catch (error) {
+          display.value = "Error";
+          currentInput = "";
+        }
+      }
+
+      function addToHistory(expression, result) {
+        let entry = expression + " = " + result;
+        historyArray.push(entry);
+        updateHistoryDisplay();
+      }
+
+      
+      function updateHistoryDisplay() {
+        let historyDiv = document.getElementById("history");
+        historyDiv.innerHTML = "";
+
+        let i = 0;
+        while (i < historyArray.length) {
+          let p = document.createElement("p");
+          p.textContent = historyArray[i];
+          historyDiv.appendChild(p);
+          i = i + 1;
+        }
+      }
+
+      function clearHistory() {
+        historyArray = [];
+        let historyDiv = document.getElementById("history");
+        historyDiv.innerHTML = "";
+      }
+
+      return { 
+        addInput,
+        clearAll,
+        deleteLast,
+        calculate,
+        clearHistory,
+      };
+    })();
+
+   
+    const display = document.getElementById("display");
+    const buttons = document.querySelectorAll("button");
+    const clearHistoryBtn = document.getElementById("clear-history-btn");
+
+    buttons.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        const value = this.textContent;
+
+        if (value === "AC") {
+          calculator.clearAll();
+        } else if (value === "Del") {
+          calculator.deleteLast();
+        } else if (value === "=") {
+          calculator.calculate();
+        } else if (value === "Clear History") {
+          return;
+        } else if (value === "e") {
+          calculator.addInput("2.7182");
+        } else if (value === "π") {
+          calculator.addInput("3.1415");
+        } else {
+          calculator.addInput(value);
+        }
+      });
+    });
+
+    clearHistoryBtn.addEventListener("click", function () {
+      calculator.clearHistory();
+    });
+  </script>
+</body>
+</html>
