@@ -79,6 +79,12 @@
 
       // Function: input add karna
       function addInput(value) {
+           if (value === ".") {
+            let lastNumber = currentInput.split(/[\+\-\*\/\(\)]/).pop();
+            if (lastNumber.includes(".")) {
+                return;
+            }
+        }
         currentInput = currentInput + value;
         display.value = currentInput;
       }
@@ -89,28 +95,40 @@
         display.value = "";
       };
 
-      // Arrow function: delete last character
       const deleteLast = () => {
-        if (currentInput) {
-          let newInput = "";
-          let i = 0;
-          while (i < currentInput.length - 1) {
-            newInput = newInput + currentInput[i];
-            i++;
-          }
-          currentInput = newInput;
-          display.value = currentInput;
+    if (currentInput) {
+      if (currentInput.endsWith("sqrt(")) {
+        currentInput = currentInput.slice(0, -5);
+      } else if (currentInput.endsWith("sin(")) {
+        currentInput = currentInput.slice(0, -4);
+      } else if (currentInput.endsWith("cos(")) {
+        currentInput = currentInput.slice(0, -4);
+      } else if (currentInput.endsWith("tan(")) {
+        currentInput = currentInput.slice(0, -4);
+      } else {
+        let newInput = "";
+        let i = 0;
+        while (i < currentInput.length - 1) {
+          newInput = newInput + currentInput[i];
+          i++;
         }
-      };
+        currentInput = newInput;
+      }
+      display.value = currentInput;
+    }
+  };
 
       function safeEvaluate(expression) {
         let expr = expression
+        .replace(/e/g, "2.7182").replace(/π/g, "3.1415")
           .replace(/\)\(/g, ")*(")
           .replace(/(\d)\(/g, "$1*(")
           .replace(/\)(\d)/g, ")*$1")
+           .replace(/\)([a-zA-Z])/g, ")*$1")
           .replace(/([0-9])([a-zA-Z])/g, "$1*$2")
           .replace(/([a-zA-Z])([0-9])/g, "$1($2)")
-          .replace(/\b0+(\d+)/g, "$1");
+          .replace(/\b0+(\d+)/g, "$1")
+          .replace(/(\d)(2\.7182|3\.1415)/g, "$1*$2").replace(/(2\.7182|3\.1415)(\d)/g, "$1*$2");
 
         expr = expr
           .replace(/sqrt\(/g, "Math.sqrt(")
@@ -153,6 +171,11 @@
         let expression = currentInput;
         try {
           let result = safeEvaluate(expression);
+            if (isNaN(result) || !isFinite(result)) {
+        display.value = "Error";
+        currentInput = "";
+        return;
+      }
           if (typeof result === "number") {
             result = Math.round(result * 10000000000) / 10000000000;
           }
@@ -226,9 +249,9 @@
         } else if (value === "Clear History") {
           return;
         } else if (value === "e") {
-          calculator.addInput("2.7182");
+          calculator.addInput("e");
         } else if (value === "π") {
-          calculator.addInput("3.1415");
+          calculator.addInput("π");
         } else {
           calculator.addInput(value);
         }
