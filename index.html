@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calculator</title>
   <link rel="stylesheet" href="style.css">
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
 </head>
 
 <body>
@@ -77,69 +78,71 @@
       let currentInput = "";
       let historyArray = [];
 
-      // Function: input add karna
       function addInput(value) {
-           if (value === ".") {
-            let lastNumber = currentInput.split(/[\+\-\*\/\(\)]/).pop();
-            if (lastNumber.includes(".")) {
-                return;
-            }
+        if (value === ".") {
+          let lastNumber = currentInput.split(/[\+\-\*\/\(\)]/).pop();
+          if (lastNumber.includes(".")) {
+            return;
+          }
         }
+
         currentInput = currentInput + value;
         display.value = currentInput;
       }
 
-      // Arrow function: clear all
       const clearAll = () => {
         currentInput = "";
         display.value = "";
       };
 
       const deleteLast = () => {
-    if (currentInput) {
-      if (currentInput.endsWith("sqrt(")) {
-        currentInput = currentInput.slice(0, -5);
-      } else if (currentInput.endsWith("sin(")) {
-        currentInput = currentInput.slice(0, -4);
-      } else if (currentInput.endsWith("cos(")) {
-        currentInput = currentInput.slice(0, -4);
-      } else if (currentInput.endsWith("tan(")) {
-        currentInput = currentInput.slice(0, -4);
-      } else {
-        let newInput = "";
-        let i = 0;
-        while (i < currentInput.length - 1) {
-          newInput = newInput + currentInput[i];
-          i++;
+        if (currentInput) {
+          if (currentInput.endsWith("sqrt(")) {
+            currentInput = currentInput.slice(0, -5);
+          } else if (currentInput.endsWith("sin(")) {
+            currentInput = currentInput.slice(0, -4);
+          } else if (currentInput.endsWith("cos(")) {
+            currentInput = currentInput.slice(0, -4);
+          } else if (currentInput.endsWith("tan(")) {
+            currentInput = currentInput.slice(0, -4);
+          } else {
+            let newInput = "";
+            let i = 0;
+            while (i < currentInput.length - 1) {
+              newInput = newInput + currentInput[i];
+              i++;
+            }
+            currentInput = newInput;
+          }
+          display.value = currentInput;
         }
-        currentInput = newInput;
-      }
-      display.value = currentInput;
-    }
-  };
+      };
 
+    
       function safeEvaluate(expression) {
+      
         let expr = expression
-        .replace(/e/g, "2.7182").replace(/π/g, "3.1415")
+          .replace(/e/g, "2.7182").replace(/π/g, "3.1415")
           .replace(/\)\(/g, ")*(")
           .replace(/(\d)\(/g, "$1*(")
           .replace(/\)(\d)/g, ")*$1")
-           .replace(/\)([a-zA-Z])/g, ")*$1")
+          .replace(/\)([a-zA-Z])/g, ")*$1")
           .replace(/([0-9])([a-zA-Z])/g, "$1*$2")
           .replace(/([a-zA-Z])([0-9])/g, "$1($2)")
           .replace(/\b0+(\d+)/g, "$1")
           .replace(/(\d)(2\.7182|3\.1415)/g, "$1*$2").replace(/(2\.7182|3\.1415)(\d)/g, "$1*$2");
 
         expr = expr
-          .replace(/sqrt\(/g, "Math.sqrt(")
-          .replace(/sin\(/g, "Math.sin(Math.PI/180*")
-          .replace(/cos\(/g, "Math.cos(Math.PI/180*")
-          .replace(/tan\(/g, "Math.tan(Math.PI/180*")
-          .replace(/\^/g, "**");
+          .replace(/sqrt\(/g, "sqrt(")
+          .replace(/sin\(/g, "sin(")
+          .replace(/cos\(/g, "cos(")
+          .replace(/tan\(/g, "tan(")
+          .replace(/\^/g, "^");
 
-        let sinCount = (expr.match(/Math\.sin/g) || []).length;
-        let cosCount = (expr.match(/Math\.cos/g) || []).length;
-        let tanCount = (expr.match(/Math\.tan/g) || []).length;
+        
+        let sinCount = (expr.match(/sin\(/g) || []).length;
+        let cosCount = (expr.match(/cos\(/g) || []).length;
+        let tanCount = (expr.match(/tan\(/g) || []).length;
         let openCount = (expr.match(/\(/g) || []).length;
         let closeCount = (expr.match(/\)/g) || []).length;
         let extraBrackets = sinCount + cosCount + tanCount;
@@ -160,22 +163,30 @@
         }
 
         try {
-          let result = Function('"use strict"; return (' + expr + ")")();
+          expr = expr
+            .replace(/sin\(([^)]+)\)/g, 'sin($1 deg)')
+            .replace(/cos\(([^)]+)\)/g, 'cos($1 deg)')
+            .replace(/tan\(([^)]+)\)/g, 'tan($1 deg)');
+
+          let result = math.evaluate(expr);
           return result;
         } catch (e) {
           return "Error";
         }
       }
+
       function calculate() {
         if (!currentInput) return;
         let expression = currentInput;
         try {
           let result = safeEvaluate(expression);
-            if (isNaN(result) || !isFinite(result)) {
-        display.value = "Error";
-        currentInput = "";
-        return;
-      }
+        
+          if (isNaN(result) || !isFinite(result)) {
+            display.value = "Error";
+            currentInput = "";
+            return;
+          }
+
           if (typeof result === "number") {
             result = Math.round(result * 10000000000) / 10000000000;
           }
@@ -228,7 +239,7 @@
         deleteLast,
         calculate,
         clearHistory,
-        restoreLast,
+        restoreLast, 
       };
     })();
 
@@ -281,5 +292,4 @@
     });
   </script>
 </body>
-
 </html>
